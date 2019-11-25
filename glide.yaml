@@ -1,0 +1,10 @@
+package: ex-depth-wss
+import:
+- package: github.com/adshao/go-binance
+- package: github.com/go-redis/redis
+  subpackages:
+  - v7
+- package: github.com/nntaoli-project/GoEx
+  subpackages:
+  - okcoin
+- package: gopkg.in/ini.v1
