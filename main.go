@@ -11,28 +11,34 @@ import (
 )
 
 func startWatchBinance(filename string, redisClient *redis.Client) {
+	// 获取配置文件
 	binanceConf := &service.BinanceConf{}
 	binanceConf.Init(filename)
 
+	// 初始化监听
 	binanceWatcher := &service.BinanceWatcher{}
 	binanceWatcher.Init(redisClient, binanceConf)
 
+	// 注册观察者
 	binanceConf.AddObserver(binanceWatcher)
 
+	// 开启盘口价格抓取
 	binanceWatcher.WatchDepth()
 }
 
 func startWatchOKEx(filename string, redisClient *redis.Client) {
+	// 获取配置文件
 	okexConf := &service.OKExConf{}
 	okexConf.Init(filename)
 
+	// 初始化监听
 	okexWatcher := &service.OKExWatcher{}
 	okexWatcher.Init(redisClient, okexConf)
 
+	// 注册观察者
 	okexConf.AddObserver(okexWatcher)
 
-	okexConf.AddObserver(okexWatcher)
-
+	// 开启盘口价格抓取
 	okexWatcher.WatchDepth()
 }
 
@@ -42,6 +48,7 @@ func main() {
 
 	filename := "etc/conf.ini"
 
+	// 链接 Redis 数据库
 	redisClient, err := service.ConnectRedis()
 	if err != nil {
 		fmt.Println("redis connect failed", err)
@@ -49,19 +56,20 @@ func main() {
 	}
 
 	go func() {
+		// 抓取 Binance 盘口价格
 		startWatchBinance(filename, redisClient)
 	}()
 
 	go func() {
+		// 抓取 OKEx 盘口价格
 		startWatchOKEx(filename, redisClient)
 	}()
 
-	//合建chan
 	c := make(chan os.Signal)
-	//监听所有信号
+	// 监听所有信号
 	signal.Notify(c)
-	//阻塞直到有信号传入
-	fmt.Println("启动")
+	// 阻塞直到有信号传入
+	fmt.Println("Service Started")
 	s := <-c
-	fmt.Println("退出信号", s)
+	fmt.Println("Exit Signal", s)
 }
