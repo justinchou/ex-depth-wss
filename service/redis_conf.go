@@ -26,7 +26,7 @@ func readRedisConf() (conf *redis.Options, err error) {
 	}, nil
 }
 
-// 链接 redis
+// ConnectRedis 链接 redis
 func ConnectRedis() (client *redis.Client, err error) {
 	conf, err := readRedisConf()
 	if err != nil {

@@ -64,11 +64,11 @@ func (bw *BinanceWatcher) WatchDepth() {
 			symbolDepth[symbol] = string(bw.config.Depth + "@" + bw.config.Interval)
 		}
 
-		go func() {
+		go func(symbol string) {
 			ticker := time.NewTicker(time.Second * 5)
 			bw.tickers = append(bw.tickers, ticker)
 
-			for _ = range ticker.C {
+			for range ticker.C {
 				err := bw.redisClient.ZRemRangeByScore(
 					"z_askbid_binance_"+symbol,
 					"0",
@@ -78,7 +78,7 @@ func (bw *BinanceWatcher) WatchDepth() {
 					fmt.Println("redis zremrangebyscore", "z_askbid_binance_"+symbol, err)
 				}
 			}
-		}()
+		}(symbol)
 	}
 
 	var err error

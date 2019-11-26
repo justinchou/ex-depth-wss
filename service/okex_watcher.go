@@ -144,7 +144,7 @@ func (ow *OKExWatcher) WatchDepth() {
 				ticker := time.NewTicker(time.Second * 5)
 				ow.tickers = append(ow.tickers, ticker)
 
-				for _ = range ticker.C {
+				for range ticker.C {
 					err := ow.redisClient.ZRemRangeByScore(
 						"z_askbid_okex_"+symbol,
 						"0",

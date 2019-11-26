@@ -35,7 +35,7 @@ func (oc *OKExConf) Init(filename string) {
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
-		for _ = range ticker.C {
+		for range ticker.C {
 			oc.ReadWatchConf()
 		}
 	}()

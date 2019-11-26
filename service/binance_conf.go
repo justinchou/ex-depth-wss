@@ -34,7 +34,7 @@ func (bc *BinanceConf) Init(filename string) {
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
-		for _ = range ticker.C {
+		for range ticker.C {
 			bc.ReadWatchConf()
 		}
 	}()
