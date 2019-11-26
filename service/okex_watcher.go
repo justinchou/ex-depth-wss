@@ -57,7 +57,6 @@ func (ow *OKExWatcher) WatchDepth() {
 	client := ow.GetOKExWss()
 	channel := "spot/depth" + ow.config.Depth
 
-	type ReceivedDataCallback func(interface{}) error
 	receivedDataCallback := func(obj interface{}) error {
 		timeStr := time.Now().Format("2006-01-02 15:04:05")
 
