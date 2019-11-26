@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v7"
@@ -15,6 +16,7 @@ type OKExWatcher struct {
 	config      *OKExConf
 	okexWss     *okex.OKWSAgent
 	channels    map[string][]string
+	tickers     []*time.Ticker
 }
 
 // Init 初始化依赖注入
@@ -86,7 +88,7 @@ func (ow *OKExWatcher) WatchDepth() {
 				err := ow.redisClient.ZAdd(
 					"z_askbid_okex_"+event.InstrumentId,
 					&redis.Z{
-						Score:  float64(time.Now().Unix()),
+						Score:  float64(time.Now().UnixNano() / 1e6),
 						Member: askbidStr,
 					}).Err()
 				if err != nil {
@@ -116,7 +118,15 @@ func (ow *OKExWatcher) WatchDepth() {
 		if !contain {
 			err := client.UnSubscribe(channel, symbol)
 			fmt.Println("unsubscribe", channel, err)
+
 			ow.channels[channel] = []string{}
+
+			for _, ticker := range ow.tickers {
+				fmt.Println("Ticker stops")
+				ticker.Stop()
+			}
+			ow.tickers = []*time.Ticker{}
+
 			break
 		}
 	}
@@ -129,6 +139,22 @@ func (ow *OKExWatcher) WatchDepth() {
 
 			err := client.Subscribe(channel, symbol, receivedDataCallback)
 			fmt.Println("subscribe", channel, symbol, err)
+
+			go func() {
+				ticker := time.NewTicker(time.Second * 5)
+				ow.tickers = append(ow.tickers, ticker)
+
+				for _ = range ticker.C {
+					err := ow.redisClient.ZRemRangeByScore(
+						"z_askbid_okex_"+symbol,
+						"0",
+						strconv.FormatInt(time.Now().UnixNano()/1e6-60*60*1e3, 10),
+					).Err()
+					if err != nil {
+						fmt.Println("redis zremrangebyscore", "z_askbid_okex_"+symbol, err)
+					}
+				}
+			}()
 		}
 	}
 }

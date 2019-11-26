@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	binance "github.com/adshao/go-binance"
@@ -15,6 +16,7 @@ type BinanceWatcher struct {
 	config      *BinanceConf
 	depthDoneC  chan struct{}
 	depthStopC  chan struct{}
+	tickers     []*time.Ticker
 }
 
 // Init 初始化依赖注入
@@ -41,7 +43,7 @@ func (bw *BinanceWatcher) WatchDepth() {
 		err := bw.redisClient.ZAdd(
 			"z_askbid_binance_"+event.Symbol,
 			&redis.Z{
-				Score:  float64(time.Now().Unix()),
+				Score:  float64(time.Now().UnixNano() / 1e6),
 				Member: askbidStr,
 			}).Err()
 		if err != nil {
@@ -61,6 +63,22 @@ func (bw *BinanceWatcher) WatchDepth() {
 		if bw.config.Interval != "" {
 			symbolDepth[symbol] = string(bw.config.Depth + "@" + bw.config.Interval)
 		}
+
+		go func() {
+			ticker := time.NewTicker(time.Second * 5)
+			bw.tickers = append(bw.tickers, ticker)
+
+			for _ = range ticker.C {
+				err := bw.redisClient.ZRemRangeByScore(
+					"z_askbid_binance_"+symbol,
+					"0",
+					strconv.FormatInt(time.Now().UnixNano()/1e6-60*60*1e3, 10),
+				).Err()
+				if err != nil {
+					fmt.Println("redis zremrangebyscore", "z_askbid_binance_"+symbol, err)
+				}
+			}
+		}()
 	}
 
 	var err error
@@ -77,6 +95,12 @@ func (bw *BinanceWatcher) Notify() {
 
 	// bw.depthDoneC <- struct{}{}
 	bw.depthStopC <- struct{}{}
+
+	for _, ticker := range bw.tickers {
+		fmt.Println("Ticker stops")
+		ticker.Stop()
+	}
+	bw.tickers = []*time.Ticker{}
 
 	bw.WatchDepth()
 }
