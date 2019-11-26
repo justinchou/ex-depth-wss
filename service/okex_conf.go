@@ -28,58 +28,72 @@ type OKExConf struct {
 }
 
 // Init 初始化配置
-func (bc *OKExConf) Init(filename string) {
-	bc.Filename = filename
+func (oc *OKExConf) Init(filename string) {
+	oc.Filename = filename
 
-	bc.ReadWatchConf()
+	oc.ReadWatchConf()
 
 	go func() {
 		ticker := time.NewTicker(time.Second * 5)
 		for _ = range ticker.C {
-			bc.ReadWatchConf()
+			oc.ReadWatchConf()
 		}
 	}()
 }
 
+// FormatSymbol 格式化 Symbol
+func (oc *OKExConf) FormatSymbol(symbol string) string {
+	return strings.ToUpper(strings.Replace(symbol, "_", "-", 1))
+}
+
+// FormatSymbols 格式化 Symbols
+func (oc *OKExConf) FormatSymbols(symbols []string) []string {
+	var n = []string{}
+	for _, symbol := range symbols {
+		n = append(n, oc.FormatSymbol(symbol))
+	}
+	return n
+}
+
 // ReadWatchConf 读取监听盘口价格配置
-func (bc *OKExConf) ReadWatchConf() (err error) {
+func (oc *OKExConf) ReadWatchConf() (err error) {
 	iniParser := utils.IniParser{}
-	if err := iniParser.Load(bc.Filename); err != nil {
-		fmt.Printf("try load config file[%s] error[%s]\n", bc.Filename, err.Error())
+	if err := iniParser.Load(oc.Filename); err != nil {
+		fmt.Printf("try load config file[%s] error[%s]\n", oc.Filename, err.Error())
 		return err
 	}
 
-	bc.Symbol = iniParser.GetString("okex", "symbol")
-	bc.Depth = iniParser.GetString("okex", "depth")
-	bc.Level = int(iniParser.GetInt32("okex", "level"))
-	bc.Interval = iniParser.GetString("okex", "interval")
-	bc.Symbols = Uniq(strings.Split(bc.Symbol, ","))
+	oc.Symbol = iniParser.GetString("okex", "symbol")
+	oc.Depth = iniParser.GetString("okex", "depth")
+	oc.Level = int(iniParser.GetInt32("okex", "level"))
+	oc.Interval = iniParser.GetString("okex", "interval")
+	oc.Symbols = oc.FormatSymbols(Uniq(strings.Split(oc.Symbol, ",")))
 
-	if bc.Symbol != bc.histSymbol ||
-		bc.Depth != bc.histDepth ||
-		bc.Level != bc.histLevel ||
-		bc.Interval != bc.histInterval {
-		bc.isChanged = true
+	if oc.Symbol != oc.histSymbol ||
+		oc.Depth != oc.histDepth ||
+		oc.Level != oc.histLevel ||
+		oc.Interval != oc.histInterval {
+		oc.isChanged = true
 	}
 
-	bc.histSymbol = bc.Symbol
-	bc.histDepth = bc.Depth
-	bc.histLevel = bc.Level
-	bc.histInterval = bc.Interval
+	oc.histSymbol = oc.Symbol
+	oc.histDepth = oc.Depth
+	oc.histLevel = oc.Level
+	oc.histInterval = oc.Interval
 
-	if bc.isChanged == true {
-		fmt.Println("okex conf hot reload", bc)
+	if oc.isChanged == true {
+		fmt.Println("okex conf hot reload", oc)
 
-		for _, observer := range bc.observers {
+		for _, observer := range oc.observers {
 			observer.Notify()
 		}
-		bc.isChanged = false
+		oc.isChanged = false
 	}
 
 	return nil
 }
 
 // AddObserver 注册观察者
-func (bc *OKExConf) AddObserver(observer Observer) {
-	bc.observers = append(bc.observers, observer)
+func (oc *OKExConf) AddObserver(observer Observer) {
+	oc.observers = append(oc.observers, observer)
 }

@@ -40,6 +40,20 @@ func (bc *BinanceConf) Init(filename string) {
 	}()
 }
 
+// FormatSymbol 格式化 Symbol
+func (bc *BinanceConf) FormatSymbol(symbol string) string {
+	return strings.ToUpper(strings.Replace(symbol, "_", "", 1))
+}
+
+// FormatSymbols 格式化 Symbols
+func (bc *BinanceConf) FormatSymbols(symbols []string) []string {
+	var n = []string{}
+	for _, symbol := range symbols {
+		n = append(n, bc.FormatSymbol(symbol))
+	}
+	return n
+}
+
 // ReadWatchConf 读取监听盘口价格配置
 func (bc *BinanceConf) ReadWatchConf() (err error) {
 	iniParser := utils.IniParser{}
@@ -52,7 +66,7 @@ func (bc *BinanceConf) ReadWatchConf() (err error) {
 	bc.Depth = iniParser.GetString("binance", "depth")
 	bc.Level = int(iniParser.GetInt32("binance", "level"))
 	bc.Interval = iniParser.GetString("binance", "interval")
-	bc.Symbols = Uniq(strings.Split(bc.Symbol, ","))
+	bc.Symbols = bc.FormatSymbols(Uniq(strings.Split(bc.Symbol, ",")))
 
 	if bc.Symbol != bc.histSymbol ||
 		bc.Depth != bc.histDepth ||
