@@ -21,6 +21,7 @@ type OKExConf struct {
 	histDepth    string
 	histLevel    int
 	histInterval string
+	histSymbols  []string
 
 	isChanged bool
 	observers []Observer
@@ -52,7 +53,7 @@ func (bc *OKExConf) ReadWatchConf() (err error) {
 	bc.Depth = iniParser.GetString("okex", "depth")
 	bc.Level = int(iniParser.GetInt32("okex", "level"))
 	bc.Interval = iniParser.GetString("okex", "interval")
-	bc.Symbols = strings.Split(bc.Symbol, ",")
+	bc.Symbols = Uniq(strings.Split(bc.Symbol, ","))
 
 	if bc.Symbol != bc.histSymbol ||
 		bc.Depth != bc.histDepth ||

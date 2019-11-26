@@ -14,6 +14,7 @@ type OKExWatcher struct {
 	redisClient *redis.Client
 	config      *OKExConf
 	okexWss     *okex.OKWSAgent
+	channels    map[string][]string
 }
 
 // Init 初始化依赖注入
@@ -22,8 +23,12 @@ func (ow *OKExWatcher) Init(client *redis.Client, config *OKExConf) {
 	ow.config = config
 }
 
-// NewOKExWss 创建 Wss 链接
-func NewOKExWss() *okex.OKWSAgent {
+// GetOKExWss 创建 Wss 链接
+func (ow *OKExWatcher) GetOKExWss() *okex.OKWSAgent {
+	if ow.okexWss != nil {
+		return ow.okexWss
+	}
+
 	config := &okex.Config{}
 
 	config.Endpoint = "https://www.okex.com/"
@@ -35,25 +40,25 @@ func NewOKExWss() *okex.OKWSAgent {
 	config.IsPrint = false
 	config.I18n = okex.ENGLISH
 
-	client := &okex.OKWSAgent{}
-	err := client.Start(config)
+	ow.okexWss = &okex.OKWSAgent{}
+	err := ow.okexWss.Start(config)
 	if err != nil {
 		fmt.Println("okex wss connect failed", err)
-		return nil
 	}
 
-	return client
+	ow.channels = make(map[string][]string)
+	return ow.okexWss
 }
 
 // WatchDepth 监听盘口价格
 func (ow *OKExWatcher) WatchDepth() {
-	timeStr := time.Now().Format("2006-01-02 15:04:05")
-
-	client := NewOKExWss()
+	client := ow.GetOKExWss()
 	channel := "spot/depth" + ow.config.Depth
 
 	type ReceivedDataCallback func(interface{}) error
 	receivedDataCallback := func(obj interface{}) error {
+		timeStr := time.Now().Format("2006-01-02 15:04:05")
+
 		switch obj.(type) {
 		case string:
 			fmt.Println("recv string", obj)
@@ -100,17 +105,37 @@ func (ow *OKExWatcher) WatchDepth() {
 		return nil
 	}
 
+	if ow.channels[channel] == nil {
+		ow.channels[channel] = []string{}
+	}
+
+	// UnSubscribe 直接将整个 channel 都停止监听了
+	for _, symbol := range ow.channels[channel] {
+		contain := Contains(ow.config.Symbols, symbol)
+
+		if !contain {
+			err := client.UnSubscribe(channel, symbol)
+			fmt.Println("unsubscribe", channel, err)
+			ow.channels[channel] = []string{}
+			break
+		}
+	}
+
 	for _, symbol := range ow.config.Symbols {
-		filter := symbol
-		client.Subscribe(channel, filter, receivedDataCallback)
+		contain := Contains(ow.channels[channel], symbol)
+
+		if !contain {
+			ow.channels[channel] = append(ow.channels[channel], symbol)
+
+			err := client.Subscribe(channel, symbol, receivedDataCallback)
+			fmt.Println("subscribe", channel, symbol, err)
+		}
 	}
 }
 
 // Notify 观察者模式调用的通知方法
-func (bw *OKExWatcher) Notify() {
-	fmt.Println("OKEx Config Chanaged", bw.config)
+func (ow *OKExWatcher) Notify() {
+	fmt.Println("OKEx Config Chanaged", ow.config)
 
-	bw.okexWss.Stop()
-
-	// bw.WatchDepth()
+	ow.WatchDepth()
 }

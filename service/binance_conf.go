@@ -52,7 +52,7 @@ func (bc *BinanceConf) ReadWatchConf() (err error) {
 	bc.Depth = iniParser.GetString("binance", "depth")
 	bc.Level = int(iniParser.GetInt32("binance", "level"))
 	bc.Interval = iniParser.GetString("binance", "interval")
-	bc.Symbols = strings.Split(bc.Symbol, ",")
+	bc.Symbols = Uniq(strings.Split(bc.Symbol, ","))
 
 	if bc.Symbol != bc.histSymbol ||
 		bc.Depth != bc.histDepth ||
