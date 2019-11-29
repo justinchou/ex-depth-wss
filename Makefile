@@ -7,3 +7,5 @@ build:
 run:
 	./main
 
+tag:
+  docker build -t ex-depth:1.0.5 .
