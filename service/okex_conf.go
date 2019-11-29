@@ -62,10 +62,12 @@ func (conf *OKExConf) ReadWatchConf() (err error) {
 		return err
 	}
 
-	conf.Symbol = iniParser.GetString("okex", "symbol")
-	conf.Depth = iniParser.GetString("okex", "depth")
-	conf.Level = int(iniParser.GetInt32("okex", "level"))
-	conf.Interval = iniParser.GetString("okex", "interval")
+	block := "okex"
+
+	conf.Symbol = iniParser.GetString(block, "symbol")
+	conf.Depth = iniParser.GetString(block, "depth")
+	conf.Level = int(iniParser.GetInt32(block, "level"))
+	conf.Interval = iniParser.GetString(block, "interval")
 	conf.Symbols = conf.FormatSymbols(Uniq(strings.Split(conf.Symbol, ",")))
 
 	if conf.Symbol != conf.histSymbol ||
@@ -81,7 +83,7 @@ func (conf *OKExConf) ReadWatchConf() (err error) {
 	conf.histInterval = conf.Interval
 
 	if conf.isChanged == true {
-		fmt.Println("okex conf hot reload", conf)
+		fmt.Println(block, "conf hot reload", conf)
 
 		for _, observer := range conf.observers {
 			observer.Notify()

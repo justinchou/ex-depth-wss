@@ -62,10 +62,12 @@ func (conf *BinanceConf) ReadWatchConf() (err error) {
 		return err
 	}
 
-	conf.Symbol = iniParser.GetString("binance", "symbol")
-	conf.Depth = iniParser.GetString("binance", "depth")
-	conf.Level = int(iniParser.GetInt32("binance", "level"))
-	conf.Interval = iniParser.GetString("binance", "interval")
+	block := "binance"
+
+	conf.Symbol = iniParser.GetString(block, "symbol")
+	conf.Depth = iniParser.GetString(block, "depth")
+	conf.Level = int(iniParser.GetInt32(block, "level"))
+	conf.Interval = iniParser.GetString(block, "interval")
 	conf.Symbols = conf.FormatSymbols(Uniq(strings.Split(conf.Symbol, ",")))
 
 	if conf.Symbol != conf.histSymbol ||
@@ -81,7 +83,7 @@ func (conf *BinanceConf) ReadWatchConf() (err error) {
 	conf.histInterval = conf.Interval
 
 	if conf.isChanged == true {
-		fmt.Println("binance conf hot reload", conf)
+		fmt.Println(block, "conf hot reload", conf)
 
 		for _, observer := range conf.observers {
 			observer.Notify()
