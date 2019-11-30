@@ -42,6 +42,22 @@ func startWatchOKEx(filename string, redisClient *redis.Client) {
 	okexWatcher.WatchDepth()
 }
 
+func startWatchGateIO(filename string, redisClient *redis.Client) {
+	// 获取配置文件
+	gateConf := &service.GateIOConf{}
+	gateConf.Init(filename)
+
+	// 初始化监听
+	gateWatcher := &service.GateIOWatcher{}
+	gateWatcher.Init(redisClient, gateConf)
+
+	// 注册观察者
+	gateConf.AddObserver(gateWatcher)
+
+	// 开启盘口价格抓取
+	gateWatcher.WatchDepth()
+}
+
 func main() {
 	timeStr := time.Now().Format("2006-01-02 15:04:05")
 	fmt.Println(timeStr, "start service")
@@ -63,6 +79,11 @@ func main() {
 	go func() {
 		// 抓取 OKEx 盘口价格
 		startWatchOKEx(filename, redisClient)
+	}()
+
+	go func() {
+		// 抓取 GateIO 盘口价格
+		startWatchGateIO(filename, redisClient)
 	}()
 
 	c := make(chan os.Signal)
